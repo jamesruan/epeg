@@ -1,0 +1,26 @@
+-ifndef(epeg_h).
+-define(epeg_h, 1).
+
+-define(DEBUG, true).
+-ifdef(DEBUG).
+-ifdef(TEST).
+-define(LOG(X), io:fwrite(user, "{~p,~p}: ~p: ~p~n", [?MODULE, ?LINE, ??X, X])).
+-else.
+-define(LOG(X), io:format(user, "{~p,~p}: ~p: ~p~n", [?MODULE, ?LINE, ??X, X])).
+-endif.
+-else.
+-define(LOG(X), true).
+-endif.
+
+-type index() :: pos_integer().
+-type parsed() :: any().
+-type input() :: string().
+-type parse_result() :: parse_ok() | parse_fail().
+-type parse_ok() :: { ok, state()}.
+-type parse_fail() :: { fail, fail_reason(), state()}.
+-type state() :: {index(), [parsed()], input()}.
+-type parser() :: fun((state(), transformer()) -> parse_result()).
+-type transformer() :: fun(([parsed()]) -> [string()]).
+-type combinator() :: fun((any()|none())-> parser()).
+-type fail_reason() :: pred_not | mismatch | eof.
+-endif.
