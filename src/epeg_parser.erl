@@ -11,7 +11,7 @@
 % #Herarchical syntax
 % Grammar <- Spacing Definition+ EndOfFile
 % Definition <- Identifier LEFTARROW Expression Transformer
-% Transformer <- '`' (!'`' .)+ '`' Spacing
+% Transformer <- '`' (!'`' Char)* '`' Spacing
 % Expression <- Sequence (SLASH Sequence)*
 % Sequence <- Prefix+
 % Prefix <- (AND / NOT)? Suffix
@@ -54,101 +54,174 @@ formal_grammar() ->
 	grammar(), grammar().
 
 grammar() ->
-	?SET('_EOF', ?PNOT(?ANYCHAR(), fun matched_EOF/1)),
-	?SET('_EOL', ?ALT([?STRING("\r\n"), ?CHAR($\n), ?CHAR($\r)], fun matched_EOL/1)),
-	?SET('_Space', ?ALT([?CHAR($\ ), ?CHAR($\t), ?SYM('_EOL')], fun matched_Space/1)),
-	?SET('_Comment', ?SEQ([?CHAR($%), ?REP(?THEN(?PNOT(?SYM('_EOL')), ?ANYCHAR())), ?SYM('_EOL')], fun matched_Comment/1)),
-	?SET('_Spacing', ?REP(?ALT([?SYM('_Space'), ?SYM('_Comment')]), fun matched_Spacing/1)),
-	?SET('_DOT', ?THEN(?CHAR($.), ?SYM('_Spacing'), fun matched_DOT/1)),
-	?SET('_CLOSE', ?THEN(?CHAR($)), ?SYM('_Spacing'), fun matched_CLOSE/1)),
-	?SET('_OPEN', ?THEN(?CHAR($(), ?SYM('_Spacing'), fun matched_OPEN/1)),
-	?SET('_PLUS', ?THEN(?CHAR($+), ?SYM('_Spacing'), fun matched_PLUS/1)),
-	?SET('_STAR', ?THEN(?CHAR($*), ?SYM('_Spacing'), fun matched_STAR/1)),
-	?SET('_QUESTION', ?THEN(?CHAR($?), ?SYM('_Spacing'), fun matched_QUESTION/1)),
-	?SET('_NOT', ?THEN(?CHAR($!), ?SYM('_Spacing'), fun matched_NOT/1)),
-	?SET('_AND', ?THEN(?CHAR($&), ?SYM('_Spacing'), fun matched_AND/1)),
-	?SET('_SLASH', ?THEN(?CHAR($/), ?SYM('_Spacing'), fun matched_SLASH/1)),
-	?SET('_LARROW', ?THEN(?STRING("<-"), ?SYM('_Spacing'), fun matched_LARROW/1)),
-	?SET('_Char', ?ALT([
-		?THEN(?CHAR($\\), ?CHARC("rnt[]\\\"\'")),
-		?THEN(?PNOT(?CHAR($\\)), ?CHARR(0, 16#10ffff))],
+	?SET('_EOF',
+		?T(?PNOT(?ANYCHAR()),
+		fun matched_EOF/1)),
+	?SET('_EOL',
+		?T(?ALT([?STRING("\r\n"), ?CHAR($\n), ?CHAR($\r)]),
+		fun matched_EOL/1)),
+	?SET('_Space',
+		?T(?ALT([?CHAR($\ ), ?CHAR($\t), ?SYM('_EOL')]),
+		fun matched_Space/1)),
+	?SET('_Comment',
+		?T(?SEQ([?CHAR($%), ?REP(?SEQ([?PNOT(?SYM('_EOL')), ?ANYCHAR()])), ?SYM('_EOL')]),
+		fun matched_Comment/1)),
+	?SET('_Spacing',
+		?T(?REP(?ALT([?SYM('_Space'), ?SYM('_Comment')])),
+		fun matched_Spacing/1)),
+	?SET('_DOT',
+		?T(?SEQ([?CHAR($.), ?SYM('_Spacing')]),
+		fun matched_DOT/1)),
+	?SET('_CLOSE',
+		?T(?SEQ([?CHAR($)), ?SYM('_Spacing')]),
+		fun matched_CLOSE/1)),
+	?SET('_OPEN',
+		?T(?SEQ([?CHAR($(), ?SYM('_Spacing')]),
+		fun matched_OPEN/1)),
+	?SET('_PLUS',
+		?T(?SEQ([?CHAR($+), ?SYM('_Spacing')]),
+		fun matched_PLUS/1)),
+	?SET('_STAR',
+		?T(?SEQ([?CHAR($*), ?SYM('_Spacing')]),
+		fun matched_STAR/1)),
+	?SET('_QUESTION',
+		?T(?SEQ([?CHAR($?), ?SYM('_Spacing')]),
+		fun matched_QUESTION/1)),
+	?SET('_NOT',
+		?T(?SEQ([?CHAR($!), ?SYM('_Spacing')]),
+		fun matched_NOT/1)),
+	?SET('_AND',
+		?T(?SEQ([?CHAR($&), ?SYM('_Spacing')]),
+		fun matched_AND/1)),
+	?SET('_SLASH',
+		?T(?SEQ([?CHAR($/), ?SYM('_Spacing')]),
+		fun matched_SLASH/1)),
+	?SET('_LARROW',
+		?T(?SEQ([?STRING("<-"), ?SYM('_Spacing')]),
+		fun matched_LARROW/1)),
+	?SET('_Char',
+		?T(?ALT([
+			?SEQ([?CHAR($\\), ?CHARC("rnt[`]\\\"\'")]),
+			?SEQ([?PNOT(?CHAR($\\)), ?CHARR(0, 16#10ffff)])]),
 		fun matched_Char/1)),
-	?SET('_Range', ?ORELSE(
-		?SEQ([?SYM('_Char'), ?CHAR($-), ?SYM('_Char')]),
-		?SYM('_Char'),
+	?SET('_Range',
+		?T(?ALT([
+			?SEQ([?SYM('_Char'), ?CHAR($-), ?SYM('_Char')]),
+			?SYM('_Char')]),
 		fun matched_Range/1)),
-	?SET('_Class', ?SEQ([?CHAR($[),
-		?REP(?THEN(?PNOT(?CHAR($])), ?SYM('_Range'))),
-		?CHAR($]), ?SYM('_Spacing')],
+	?SET('_Class',
+		?T(?SEQ([?CHAR($[),
+			?REP(?SEQ([?PNOT(?CHAR($])), ?SYM('_Range')])),
+			?CHAR($]), ?SYM('_Spacing')]),
 		fun matched_Class/1)),
-	?SET('_Literal', ?ALT([
-		?SEQ([?CHAR($'),
-		?REP(?THEN(?PNOT(?CHAR($')), ?SYM('_Char'))),
-		?CHAR($'), ?SYM('_Spacing')]),
-		?SEQ([?CHAR($"),
-		?REP(?THEN(?PNOT(?CHAR($")), ?SYM('_Char'))),
-		?CHAR($"), ?SYM('_Spacing')])],
+	?SET('_Literal',
+		?T(?ALT([
+			?SEQ([?CHAR($'),
+			?REP(?SEQ([?PNOT(?CHAR($')), ?SYM('_Char')])),
+			?CHAR($'), ?SYM('_Spacing')]),
+			?SEQ([?CHAR($"),
+			?REP(?SEQ([?PNOT(?CHAR($")), ?SYM('_Char')])),
+			?CHAR($"), ?SYM('_Spacing')])]),
 		fun matched_Literal/1)),
-	?SET('_IdentStart', ?ALT([?CHARC("_"), ?CHARR($a, $z), ?CHARR($A, $Z)])),
-	?SET('_IdentCont', ?ORELSE(?SYM('_IdentStart'), ?CHARR($0, $9))),
-	?SET('_Identifier', ?SEQ([?SYM('_IdentStart'), ?REP(?SYM('_IdentCont')), ?SYM('_Spacing')], fun matched_Identifier/1)),
-	?SET('_Primary', ?ALT([
-		?THEN(?SYM('_Identifier'), ?PNOT(?SYM('_LARROW'))),
-		?SEQ([?SYM('_OPEN'), ?SYM('_Expression'),  ?SYM('_CLOSE')]),
-		?SYM('_Literal'),
-		?SYM('_Class'),
-		?SYM('_DOT')], fun matched_Primary/1)),
-	?SET('_Suffix', ?THEN(?SYM('_Primary'), ?OPT(?ALT([?SYM('_QUESTION'), ?SYM('_STAR'), ?SYM('_PLUS')])), fun matched_Suffix/1)),
-	?SET('_Prefix', ?THEN(?OPT(?ORELSE(?SYM('_AND'), ?SYM('_NOT'))), ?SYM('_Suffix'), fun matched_Prefix/1)),
-	?SET('_Sequence', ?MORE(?SYM('_Prefix'), fun matched_Sequence/1)),
-	?SET('_Expression', ?THEN(?SYM('_Sequence'), ?REP(?THEN(?SYM('_SLASH'), ?SYM('_Sequence'))), fun matched_Expression/1)).
+	?SET('_IdentStart',
+		?ALT([?CHARC("_"), ?CHARR($a, $z), ?CHARR($A, $Z)])),
+	?SET('_IdentCont',
+		?ALT([?SYM('_IdentStart'), ?CHARR($0, $9)])),
+	?SET('_Identifier',
+		?T(?SEQ([
+			?SYM('_IdentStart'),
+			?REP(?SYM('_IdentCont')),
+			?SYM('_Spacing')]),
+		fun matched_Identifier/1)),
+	?SET('_Primary',
+		?T(?ALT([
+			?SEQ([?SYM('_Identifier'), ?PNOT(?SYM('_LARROW'))]),
+			?SEQ([?SYM('_OPEN'), ?SYM('_Expression'),  ?SYM('_CLOSE')]),
+			?SYM('_Literal'),
+			?SYM('_Class'),
+			?SYM('_DOT')]),
+		fun matched_Primary/1)),
+	?SET('_Suffix',
+		?T(?SEQ([?SYM('_Primary'),
+		?OPT(?ALT([?SYM('_QUESTION'), ?SYM('_STAR'), ?SYM('_PLUS')]))]),
+		fun matched_Suffix/1)),
+	?SET('_Prefix',
+		?T(?SEQ([?OPT(?ALT([?SYM('_AND'), ?SYM('_NOT')])), ?SYM('_Suffix')]),
+		fun matched_Prefix/1)),
+	?SET('_Sequence',
+		?T(?MORE(?SYM('_Prefix')),
+		fun matched_Sequence/1)),
+	?SET('_Expression',
+		?T(?SEQ([?SYM('_Sequence'),
+		?REP(?SEQ([?SYM('_SLASH'), ?SYM('_Sequence')]))]),
+		fun matched_Expression/1)),
+	?SET('_Transformer',
+		?T(?SEQ([?CHAR($`),
+			?REP(?SEQ([?PNOT(?CHAR($`)), ?SYM('_Char')])),
+			?CHAR($`), ?SYM('_Spacing')]),
+		fun matched_Transformer/1)),
+	?SET('_Definition', 
+		?T(?SEQ([
+			?SYM('_Identifier'),
+			?SYM('_LARROW'),
+			?SYM('_Expression'),
+			?SYM('_Transformer')]),
+		fun matched_Definition/1)),
+	?SET('_Grammar',
+		?T(?SEQ([
+			?SYM('_Spacing'), 
+			?MORE(?SYM('_Definition')),
+			?SYM('_EOF')]),
+		fun matched_Grammar/1)).
 
 matched_EOF(_L) ->
 	% !.
-	eof.
+	[eof].
 
 matched_EOL(_L) ->
-	eol.
+	[eol].
 	
 matched_Space(_L) ->
-	space.
+	[space].
 
 matched_Comment(L) ->
-	[ "%", Comment, 'eol'] = L,
-	{comment, lists:flatten(Comment)}.
+	[ "%"| Commenteol] = L,
+	eol = lists:last(Commenteol),
+	Comment = lists:droplast(Commenteol),
+	[{comment, lists:append(Comment)}].
 
 matched_Spacing(_L) ->
-	spacing.
+	[spacing].
 
 matched_DOT(_L) ->
-	dot.
+	[dot].
 
 matched_CLOSE(_L) ->
-	close.
+	[close].
 
 matched_OPEN(_L) ->
-	open.
+	[open].
 
 matched_PLUS(_L) ->
-	plus.
+	[plus].
 
 matched_STAR(_L) ->
-	star.
+	[star].
 
 matched_QUESTION(_L) ->
-	question.
+	[question].
 
 matched_NOT(_L) ->
-	'not'.
+	['not'].
 
 matched_AND(_L) ->
-	'and'.
+	['and'].
 
 matched_SLASH(_L) ->
-	slash.
+	[slash].
 
 matched_LARROW(_L) ->
-	larrow.
+	[larrow].
 
 matched_Char(L) ->
 	R = case L of
@@ -158,26 +231,30 @@ matched_Char(L) ->
 		"n" -> "\n";
 		"t" -> "\t";
 		"[" -> "[";
+		"`" -> "`";
 		"]" -> "]";
 		"\"" -> "\"";
 		"'" -> "'";
 		"\\" -> "\\"
 		end;
-	O ->
+	[O] ->
 		O
 	end,
-	{char, R}.
+	[{char, R}].
 
 matched_Range(L) ->
 	case L of
 	[F, "-", T] ->
-		{charr, F, T};
-	O ->
+		[{charr, F, T}];
+	O->
 		O
 	end.
 
 matched_Class(L) ->
-	["[", S , "]", spacing] = L,
+	spacing = lists:last(L),
+	["[" | X ] = lists:droplast(L),
+	"]" = lists:last(X),
+	S = lists:droplast(X),
 	RangeStrList = lists:filtermap(fun(E) ->
 		case E of
 		{charr, {char, [F]}, {char, [T]}} ->
@@ -207,30 +284,25 @@ matched_Class(L) ->
 	[Head| Tail] = RangeStrList ++ CharStr,
 	if
 	length(Tail) >= 1 ->
-		{alt, [Head | Tail]};
+		[{alt, [Head | Tail]}];
 	true ->
-		Head
+		[Head]
 	end.
 
 matched_Literal(L) ->
-	String = case L of
-	["'", S, "'", spacing] ->
-		lists:map(fun (E) ->
-			{char, [C]} = E,
-			C
-			end, S);
-	["\"", S, "\"", spacing] ->
-		lists:map(fun (E) ->
-			{char, [C]} = E,
-			C
-			end, S)
-	end,
-	{literal, String}.
+	spacing = lists:last(L),
+	[M | X ] = lists:droplast(L),
+	M = lists:last(X),
+	String = lists:map(fun (E) ->
+		{char, [C]} = E,
+		C
+		end, lists:droplast(X)),
+	[{literal, String}].
 
 matched_Identifier(L)->
 	FL = lists:flatten(L),
 	spacing = lists:last(FL),
-	{identifier, lists:droplast(FL)}.
+	[{identifier, lists:droplast(FL)}].
 
 matched_PrimaryClass(L) ->
 	case L of
@@ -242,23 +314,23 @@ matched_PrimaryClass(L) ->
 
 matched_Primary(L) ->
 	G = case L of
-	{identifier, Id} ->
+	[{identifier, Id}] ->
 		gen_identifier(Id);
 	[open, {expression, E}, close] ->
 		E;
-	{literal, S} ->
+	[{literal, S}] ->
 		gen_literal(S);
-	{charr, {char, [F]}, {char, [T]}} ->
+	[{charr, {char, [F]}, {char, [T]}}] ->
 		gen_charrange(F, T);
-	{charc, CList} ->
+	[{charc, CList}] ->
 		gen_charclass(CList);
-	{alt, R} ->
+	[{alt, R}] ->
 		PC = lists:map(fun matched_PrimaryClass/1, R),
 		gen_alt(PC);
-	dot ->
+	[dot] ->
 		gen_anychar()
 	end,
-	{primary, G}.
+	[{primary, G}].
 
 matched_Suffix(L) ->
 	G = case L of
@@ -268,10 +340,10 @@ matched_Suffix(L) ->
 		lists:concat(["epeg_combinator:c_rep(", P, ")"]);
 	[{primary, P}, plus]->
 		lists:concat(["epeg_combinator:c_more(", P, ")"]);
-	{primary, P}->
+	[{primary, P}]->
 		P
 	end,
-	{suffix, G}.
+	[{suffix, G}].
 
 matched_Prefix(L) ->
 	G = case L of
@@ -279,40 +351,67 @@ matched_Prefix(L) ->
 		lists:concat(["epeg_combinator:c_pred_and(", P, ")"]);
 	['not', {suffix, P}]->
 		lists:concat(["epeg_combinator:c_pred_not(", P, ")"]);
-	{suffix, P} ->
+	[{suffix, P}] ->
 		P
 	end,
-	{prefix, G}.
+	[{prefix, G}].
 
 matched_Sequence(L) ->
 	G = case L of
+	[{prefix, H}]->
+		H;
 	[{prefix, H} | T] ->
 		A = lists:foldl(fun({prefix, E}, Acc)->
 			Acc ++ ", " ++ E
 		end, H, T),
-		lists:concat(["epeg_combinator:c_seq([", A, "])"]);
-	{prefix, H}->
-		H
+		lists:concat(["epeg_combinator:c_seq([", A, "])"])
 	end,
-	{sequence, G}.
+	[{sequence, G}].
 
 matched_Expression(L) ->
 	G = case L of
+	[{sequence, H}] ->
+		H;
 	[{sequence, H} | T] ->
-		if
-		T =:= [] ->
-			H;
-		true ->
-			A = lists:foldl(fun([slash, E], Acc)->
-				{sequence, SE} = E,
-				Acc ++ ", " ++ SE
-			end, H, T),
-			lists:concat(["epeg_combinator:c_alt([", A, "])"])
-		end;
-	{sequence, H} ->
-		H
+		A = lists:foldl(fun(E, Acc)->
+			case E of
+			slash ->
+				Acc ++ ", ";
+			{sequence, SE} ->
+				Acc ++ SE
+			end
+		end, H, T),
+		lists:concat(["epeg_combinator:c_alt([", A, "])"])
 	end,
-	{expression, G}.
+	[{expression, G}].
+
+matched_Transformer(L) ->
+	spacing = lists:last(L),
+	[M | X ] = lists:droplast(L),
+	M = "`" = lists:last(X),
+	String = lists:map(fun (E) ->
+		{char, [C]} = E,
+		C
+		end, lists:droplast(X)),
+	[{transformer, String}].
+
+matched_Definition(L) ->
+	[{identifier, Id}, larrow, {expression, E}, {transformer, T}] = L,
+	[{definition, lists:concat([
+		"epeg_combinator:c_symbol_put(\"", Id, "\", ",
+		"epeg_combinator:c_tr(", E, ", ", T, "))."])}].
+
+matched_Grammar(L) ->
+	eof = lists:last(L),
+	[spacing | Defs ] = lists:droplast(L),
+	case Defs of
+	[{definition, H} | T] ->
+		lists:foldl(fun ({definition, E}, Acc) ->
+			Acc ++ "\n" ++ E
+			end, H, T);
+	{definition, H} ->
+		H
+	end.
 
 gen_identifier(Id) ->
 	lists:concat(["epeg_combinator:c_symbol_get(\"", Id, "\")"]).

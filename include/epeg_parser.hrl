@@ -1,15 +1,14 @@
 -ifndef(epeg_parser_h).
 -define(epeg_parser_h, 1).
+-define(T, epeg_combinator:c_tr).
 -define(ANYCHAR, epeg_combinator:c_anychar).
 -define(CHAR, epeg_combinator:c_char).
 -define(CHARR, epeg_combinator:c_charrange).
 -define(CHARC, epeg_combinator:c_charclass).
 -define(STRING, epeg_combinator:c_string).
--define(THEN, epeg_combinator:c_then).
 -define(SEQ, epeg_combinator:c_seq).
 -define(PAND, epeg_combinator:c_pred_and).
 -define(PNOT, epeg_combinator:c_pred_not).
--define(ORELSE, epeg_combinator:c_orelse).
 -define(ALT, epeg_combinator:c_alt).
 -define(REP, epeg_combinator:c_rep).
 -define(MORE, epeg_combinator:c_more).
