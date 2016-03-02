@@ -22,5 +22,5 @@
 -type parser() :: fun((state(), transformer()) -> parse_result()).
 -type transformer() :: fun(([parsed()]) -> [string()]).
 -type combinator() :: fun((any()|none())-> parser()).
--type fail_reason() :: pred_not | mismatch | eof.
+-type fail_reason() :: mismatch | eof.
 -endif.

@@ -6,7 +6,7 @@
 -define(P(S), {1, "", S}).
 -define(M(S), {ok, {_, S, _}}).
 
--define(S(F), {??F, F}).
+-define(S(F), {timeout, 10, {??F, F}}).
 setup() ->
 	erase(),
 	epeg_parser:formal_grammar().
@@ -161,7 +161,7 @@ test_Identifier() ->
 test_Primary() ->
 	F = ?SYM('_Primary'),
 	?M([{primary, "epeg_combinator:c_symbol_get(\"t\")"}]) = F(?P("t")),
-	%?M([{primary, "epeg_combinator:c_symbol_get(\"t\")"}]) = F(?P("(t)")),
+	?M([{primary, "epeg_combinator:c_symbol_get(\"t\")"}]) = F(?P("(t)")),
 	?M([{primary, "epeg_combinator:c_string(\"test\")"}]) = F(?P("'test'")),
 	?M([{primary, "epeg_combinator:c_charrange(97, 122)"}]) = F(?P("[a-z]")),
 	?M([{primary, "epeg_combinator:c_charclass(\"tes\")"}]) = F(?P("[test]")),
@@ -201,4 +201,5 @@ test_Definition() ->
 
 test_Grammar() ->
 	F = ?SYM('_Grammar'),
-	?M("epeg_combinator:c_symbol_put(\"Transformer\", epeg_combinator:c_tr(epeg_combinator:c_seq([epeg_combinator:c_string(\"`\"), epeg_combinator:c_rep(epeg_combinator:c_seq([epeg_combinator:c_pred_not(epeg_combinator:c_string(\"`\")), epeg_combinator:c_anychar()])), epeg_combinator:c_string(\"`\")]), fun ([\"`\", L, \"`\"]) -> L end)).") = F(?P("Transformer <- '`' (!'`' .)* '`'\n`fun ([\"\\`\", L, \"\\`\"]) -> L end`\n")).
+	?M("epeg_combinator:c_symbol_put(\"Start\", epeg_combinator:c_symbol_get(\"Transformer\")).") = F(?P("Start <- Transformer\n")),
+	?M("epeg_combinator:c_symbol_put(\"Start\", epeg_combinator:c_symbol_get(\"Transformer\")).\nepeg_combinator:c_symbol_put(\"Transformer\", epeg_combinator:c_tr(epeg_combinator:c_seq([epeg_combinator:c_string(\"`\"), epeg_combinator:c_rep(epeg_combinator:c_seq([epeg_combinator:c_pred_not(epeg_combinator:c_string(\"`\")), epeg_combinator:c_anychar()])), epeg_combinator:c_string(\"`\")]), fun ([\"`\", L, \"`\"]) -> L end)).") = F(?P("Start <- Transformer\nTransformer <- '`' (!'`' .)* '`'\n`fun ([\"\\`\", L, \"\\`\"]) -> L end`\n")).

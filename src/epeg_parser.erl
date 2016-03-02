@@ -10,7 +10,7 @@
 
 % #Herarchical syntax
 % Grammar <- Spacing Definition+ EndOfFile
-% Definition <- Identifier LEFTARROW Expression Transformer
+% Definition <- Identifier LEFTARROW Expression Transformer?
 % Transformer <- '`' (!'`' Char)* '`' Spacing
 % Expression <- Sequence (SLASH Sequence)*
 % Sequence <- Prefix+
@@ -124,7 +124,7 @@ grammar() ->
 			?CHAR($"), ?SYM('_Spacing')])]),
 		fun matched_Literal/1)),
 	?SET('_IdentStart',
-		?ALT([?CHARC("_"), ?CHARR($a, $z), ?CHARR($A, $Z)])),
+		?ALT([?CHAR($_), ?CHARR($a, $z), ?CHARR($A, $Z)])),
 	?SET('_IdentCont',
 		?ALT([?SYM('_IdentStart'), ?CHARR($0, $9)])),
 	?SET('_Identifier',
@@ -165,11 +165,11 @@ grammar() ->
 			?SYM('_Identifier'),
 			?SYM('_LARROW'),
 			?SYM('_Expression'),
-			?SYM('_Transformer')]),
+			?OPT(?SYM('_Transformer'))]),
 		fun matched_Definition/1)),
 	?SET('_Grammar',
 		?T(?SEQ([
-			?SYM('_Spacing'), 
+			?SYM('_Spacing'),
 			?MORE(?SYM('_Definition')),
 			?SYM('_EOF')]),
 		fun matched_Grammar/1)).
@@ -300,9 +300,9 @@ matched_Literal(L) ->
 	[{literal, String}].
 
 matched_Identifier(L)->
-	FL = lists:flatten(L),
-	spacing = lists:last(FL),
-	[{identifier, lists:droplast(FL)}].
+	spacing = lists:last(L),
+	Id = lists:append(lists:droplast(L)),
+	[{identifier, Id}].
 
 matched_PrimaryClass(L) ->
 	case L of
@@ -396,22 +396,24 @@ matched_Transformer(L) ->
 	[{transformer, String}].
 
 matched_Definition(L) ->
-	[{identifier, Id}, larrow, {expression, E}, {transformer, T}] = L,
-	[{definition, lists:concat([
-		"epeg_combinator:c_symbol_put(\"", Id, "\", ",
-		"epeg_combinator:c_tr(", E, ", ", T, "))."])}].
+	case L of
+	[{identifier, Id}, larrow, {expression, E}, {transformer, T}]->
+		[{definition, lists:concat([
+			"epeg_combinator:c_symbol_put(\"", Id, "\", ",
+			"epeg_combinator:c_tr(", E, ", ", T, "))."])}];
+	[{identifier, Id}, larrow, {expression, E}]->
+		[{definition, lists:concat([
+			"epeg_combinator:c_symbol_put(\"", Id, "\", ",
+			E, ")."])}]
+	end.
 
 matched_Grammar(L) ->
 	eof = lists:last(L),
 	[spacing | Defs ] = lists:droplast(L),
-	case Defs of
-	[{definition, H} | T] ->
-		lists:foldl(fun ({definition, E}, Acc) ->
-			Acc ++ "\n" ++ E
-			end, H, T);
-	{definition, H} ->
-		H
-	end.
+	[{definition, H} | T] = Defs,
+	lists:foldl(fun ({definition, E}, Acc) ->
+		Acc ++ "\n" ++ E
+		end, H, T).
 
 gen_identifier(Id) ->
 	lists:concat(["epeg_combinator:c_symbol_get(\"", Id, "\")"]).

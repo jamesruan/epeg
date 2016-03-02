@@ -35,7 +35,8 @@ c_tr(A, T) when is_function(T) ->
 
 -spec c_empty() -> parser().
 c_empty() ->
-	fun ({I, _P, Input}) -> {ok, {I, [], Input}}
+	fun ({I, _P, Input}) ->
+		{ok, {I, [], Input}}
 	end.
 
 -spec c_anychar() -> parser().
@@ -60,7 +61,7 @@ c_char(C) ->
 			C ->
 				{ok, {I+1, [[C]], Input}};
 			_ ->
-				{fail, mismatch, {I, [], Input}}
+				{fail, {mismatch, char, [C]}, {I, [], Input}}
 			end
 		end
 	end.
@@ -77,7 +78,7 @@ c_charrange(F, T) when F < T ->
 			C >= F , C =< T ->
 				{ok, {I+1, [[C]], Input}};
 			true ->
-				{fail, mismatch, {I, [], Input}}
+				{fail, {mismatch, charrange, [F], [T]}, {I, [], Input}}
 			end
 		end
 	end.
@@ -94,7 +95,7 @@ c_charclass(L) ->
 			true ->
 				{ok, {I+1, [[C]], Input}};
 			_ ->
-				{fail, mismatch, {I, [], Input}}
+				{fail, {mismatch, charclass, L}, {I, [], Input}}
 			end
 		end
 	end.
@@ -106,7 +107,7 @@ c_string(S) ->
 		S ->
 			{ok, {I+length(S), [S], Input}};
 		_ ->
-			{fail, mismatch, {I, [], Input}}
+			{fail, {mismatch, string, S}, {I, [], Input}}
 		end
 	end.
 
@@ -121,7 +122,7 @@ c_then(A, B) ->
 			{ok, {Ib, Pb, _}} ->
 				{ok, {Ib, Pa ++ Pb, Input}};
 			{fail, Reason, _} ->
-				{fail, Reason, {Ia, Pa, Input}}
+				{fail, Reason, {I, [], Input}}
 			end;
 		{fail, Reason, _} ->
 			{fail, Reason, {I, [], Input}}
@@ -141,7 +142,7 @@ c_pred_not(A) ->
 	fun ({I, _, Input}) ->
 		case A({I, [], Input}) of
 		{ok, _State} ->
-			{fail, pred_not, {I, [], Input}};
+			{fail, {mismatch, '!'}, {I, [], Input}};
 		{fail, _R, _S} ->
 			{ok, {I, [], Input}}
 		end
@@ -156,7 +157,7 @@ c_pred_and(A) ->
 		{ok, _State} ->
 			{ok, {I, [], Input}};
 		{fail, _R, _S} ->
-			{fail, pred_not, {I, [], Input}}
+			{fail, {mismatch, '&'}, {I, [], Input}}
 		end
 	end.
 
@@ -192,13 +193,13 @@ c_alt([H|[A|T]]) ->
 %([A]) -> [A1, A2, ...]
 % *
 c_rep(A) ->
-	R = fun R({I, _, Input}) ->
+	fun R({I, _, Input}) ->
 		case A({I, [], Input}) of
 		{ok, {Io, Po, _}} ->
 			{ok, {In, Pn, _}} = R({Io, [], Input}),
 			{ok, {In, Po ++ Pn, Input}};
-		{fail, _, {Io, Po, _}} ->
-			{ok, {Io, Po, Input}}
+		{fail, _, _} ->
+			{ok, {I, [], Input}}
 		end
 	end.
 
@@ -211,6 +212,26 @@ c_more(A) -> c_then(A, c_rep(A)).
 % ?
 c_option(A) -> c_orelse(A, c_empty()).
 
+-ifdef(TRACE).
+-spec c_symbol_put(atom(), parser()) -> parser().
+c_symbol_put(S, F) ->
+	case get(S) of
+	F -> F;
+	_ ->
+		R=fun({I, _, Input}) ->
+			?LOG(I), ?LOG(S),
+			V =  F({I, [], Input}),
+			case V of
+			{ok, {_, M, _}} ->
+				?LOG({ok, S, M});
+			_ ->
+				pass
+			end,
+			V end,
+		put(S, R),
+		R
+	end.
+-else.
 -spec c_symbol_put(atom(), parser()) -> parser().
 c_symbol_put(S, F) ->
 	case get(S) of
@@ -219,6 +240,7 @@ c_symbol_put(S, F) ->
 		put(S, F),
 		F
 	end.
+-endif.
 
 -spec c_symbol_get(atom()) -> parser().
 c_symbol_get(S) -> get(S).
