@@ -42,7 +42,8 @@ symbol_test_() ->
 	?S(fun test_Expression/0),
 	?S(fun test_Transformer/0),
 	?S(fun test_Definition/0),
-	?S(fun test_Grammar/0)
+	?S(fun test_Grammar/0),
+	?S(fun test_bootstrap/0)
 	].
 
 test_EOF() ->
@@ -136,60 +137,60 @@ test_Char() ->
 
 test_Range() ->
 	F = ?SYM('_Range'),
-	?M([{charr, {char, "a"}, {char, "z"}}]) = F(?P("a-z")),
-	?M([{char, "a"}]) = F(?P("a")).
+	?M([{charr, $a, $z}]) = F(?P("a-z")),
+	?M([{char, $a}]) = F(?P("a")).
 
 test_Class() ->
 	F = ?SYM('_Class'),
 	?M([{charc, "tes"}]) = F(?P("[test]")),
-	?M([{charr, {char, "a"}, {char, "z"}}]) = F(?P("[a-z]")),
-	?M([{alt, [{charr, {char, "a"}, {char, "z"}},
-	    {charr, {char, "A"}, {char, "Z"}},
+	?M([{charr, $a, $z}]) = F(?P("[a-z]")),
+	?M([{class, [{charr, $a, $z},
+	    {charr, $A, $Z},
 	    {charc, "\r\n\t"}]}]) = F(?P("[\ra-z\nA-Z\t]")).
 
 test_Literal() ->
 	F = ?SYM('_Literal'),
-	?M([{literal, "te\"st"}]) = F(?P("'te\"st'")),
+	?M([{literal, "te\"st\\"}]) = F(?P("'te\"st\\\\'")),
 	?M([{literal, "te'st"}]) = F(?P("\"te'st\"")).
 
 test_Identifier() ->
 	F = ?SYM('_Identifier'),
-	?M([{identifier, "t"}]) = F(?P("t")),
-	?M([{identifier, "t1"}]) = F(?P("t1")),
-	?M([{identifier, "test"}]) = F(?P("test")).
+	?M([{identifier, "'t'"}]) = F(?P("t")),
+	?M([{identifier, "'t1'"}]) = F(?P("t1")),
+	?M([{identifier, "'test'"}]) = F(?P("test")).
 
 test_Primary() ->
 	F = ?SYM('_Primary'),
-	?M([{primary, "epeg_combinator:c_symbol_get(\"t\")"}]) = F(?P("t")),
-	?M([{primary, "epeg_combinator:c_symbol_get(\"t\")"}]) = F(?P("(t)")),
-	?M([{primary, "epeg_combinator:c_string(\"test\")"}]) = F(?P("'test'")),
-	?M([{primary, "epeg_combinator:c_charrange(97, 122)"}]) = F(?P("[a-z]")),
-	?M([{primary, "epeg_combinator:c_charclass(\"tes\")"}]) = F(?P("[test]")),
-	?M([{primary, "epeg_combinator:c_alt([epeg_combinator:c_charrange(97, 122), epeg_combinator:c_charrange(65, 90), epeg_combinator:c_charclass(\"\r\n\t\")])"}]) = F(?P("[\ra-z\nA-Z\t]")),
-	?M([{primary, "epeg_combinator:c_anychar()"}]) = F(?P(".")).
+	?M([{primary, {symbol,"'t'"}}]) = F(?P("t")),
+	?M([{primary, {symbol,"'t'"}}]) = F(?P("(t)")),
+	?M([{primary, {string,"test"}}]) = F(?P("'test'")),
+	?M([{primary, {charr, $a, $z}}]) = F(?P("[a-z]")),
+	?M([{primary, {charc, "tes"}}]) = F(?P("[test]")),
+	?M([{primary, {alt, [{charr, $a, $z}, {charr, $A, $Z}, {charc, "\r\n\t"}]}}]) = F(?P("[\ra-z\nA-Z\t]")),
+	?M([{primary, {anychar}}]) = F(?P(".")).
 
 test_Suffix() ->
 	F = ?SYM('_Suffix'),
-	?M([{suffix, "epeg_combinator:c_option(epeg_combinator:c_anychar())"}]) = F(?P(".?")),
-	?M([{suffix, "epeg_combinator:c_rep(epeg_combinator:c_anychar())"}]) = F(?P(".*")),
-	?M([{suffix, "epeg_combinator:c_more(epeg_combinator:c_anychar())"}]) = F(?P(".+")),
-	?M([{suffix, "epeg_combinator:c_anychar()"}]) = F(?P(".")).
+	?M([{suffix, {option, {anychar}}}]) = F(?P(".?")),
+	?M([{suffix, {rep, {anychar}}}]) = F(?P(".*")),
+	?M([{suffix, {more, {anychar}}}]) = F(?P(".+")),
+	?M([{suffix, {anychar}}]) = F(?P(".")).
 
 test_Prefix() ->
 	F = ?SYM('_Prefix'),
-	?M([{prefix, "epeg_combinator:c_pred_and(epeg_combinator:c_anychar())"}]) = F(?P("&.")),
-	?M([{prefix, "epeg_combinator:c_pred_not(epeg_combinator:c_anychar())"}]) = F(?P("!.")),
-	?M([{prefix, "epeg_combinator:c_more(epeg_combinator:c_anychar())"}]) = F(?P(".+")).
+	?M([{prefix, {p_and, {anychar}}}]) = F(?P("&.")),
+	?M([{prefix, {p_not, {anychar}}}]) = F(?P("!.")),
+	?M([{prefix, {more, {anychar}}}]) = F(?P(".+")).
 
 test_Sequence() ->
 	F = ?SYM('_Sequence'),
-	?M([{sequence, "epeg_combinator:c_seq([epeg_combinator:c_anychar(), epeg_combinator:c_anychar()])"}]) = F(?P(". .")),
-	?M([{sequence, "epeg_combinator:c_more(epeg_combinator:c_anychar())"}]) = F(?P(".+")).
+	?M([{sequence, {seq, [{anychar}, {anychar}]}}]) = F(?P(". .")),
+	?M([{sequence, {more, {anychar}}}]) = F(?P(".+")).
 
 test_Expression() ->
 	F = ?SYM('_Expression'),
-	?M([{expression, "epeg_combinator:c_alt([epeg_combinator:c_symbol_get(\"t\"), epeg_combinator:c_anychar()])"}]) = F(?P("t/.")),
-	?M([{expression, "epeg_combinator:c_symbol_get(\"t\")"}]) = F(?P("t")).
+	?M([{expression, {alt, [{symbol, "'t'"}, {anychar}]}}]) = F(?P("t/.")),
+	?M([{expression, {symbol, "'t'"}}]) = F(?P("t")).
 
 test_Transformer()->
 	F = ?SYM('_Transformer'),
@@ -197,9 +198,14 @@ test_Transformer()->
 
 test_Definition() ->
 	F = ?SYM('_Definition'),
-	?M([{definition,"epeg_combinator:c_symbol_put(\"Transformer\", epeg_combinator:c_tr(epeg_combinator:c_seq([epeg_combinator:c_string(\"`\"), epeg_combinator:c_rep(epeg_combinator:c_seq([epeg_combinator:c_pred_not(epeg_combinator:c_string(\"`\")), epeg_combinator:c_anychar()])), epeg_combinator:c_string(\"`\")]), fun ([\"`\", L, \"`\"]) -> L end))."}]) = F(?P("Transformer <- '`' (!'`' .)* '`'\n`fun ([\"\\`\", L, \"\\`\"]) -> L end`\n")).
+	?M([{definition, "'Transformer'", {seq, [{string, "`"}, {rep, {seq, [{p_not, {string ,"`"}}, {anychar} ]}}, {string, "`"}]}, "fun ([\"`\", L, \"`\"]) -> L end"}]) = F(?P("Transformer <- '`' (!'`' .)* '`'\n`fun ([\"\\`\", L, \"\\`\"]) -> L end`\n")).
 
 test_Grammar() ->
 	F = ?SYM('_Grammar'),
-	?M("epeg_combinator:c_symbol_put(\"Start\", epeg_combinator:c_symbol_get(\"Transformer\")).") = F(?P("Start <- Transformer\n")),
-	?M("epeg_combinator:c_symbol_put(\"Start\", epeg_combinator:c_symbol_get(\"Transformer\")).\nepeg_combinator:c_symbol_put(\"Transformer\", epeg_combinator:c_tr(epeg_combinator:c_seq([epeg_combinator:c_string(\"`\"), epeg_combinator:c_rep(epeg_combinator:c_seq([epeg_combinator:c_pred_not(epeg_combinator:c_string(\"`\")), epeg_combinator:c_anychar()])), epeg_combinator:c_string(\"`\")]), fun ([\"`\", L, \"`\"]) -> L end)).") = F(?P("Start <- Transformer\nTransformer <- '`' (!'`' .)* '`'\n`fun ([\"\\`\", L, \"\\`\"]) -> L end`\n")).
+	?M([{grammar, [{definition, "'Start'", {symbol, "'Transformer'"}}, {definition, "'Transformer'", {seq, [{string, "`"}, {rep, {seq, [{p_not, {string ,"`"}}, {anychar} ]}}, {string, "`"}]}, "fun ([\"`\", L, \"`\"]) -> L end"}]}]) = F(?P("Start <- Transformer\nTransformer <- '`' (!'`' .)* '`'\n`fun ([\"\\`\", L, \"\\`\"]) -> L end`\n")).
+
+test_bootstrap() ->
+	{ok, B} = file:read_file("../priv/grammar.epeg"),
+	F = ?SYM('_Grammar'),
+	{ok, {_, R, _}} = F(?P(binary:bin_to_list(B))),
+	ok = file:write_file("../priv/test.ast", erlang:list_to_bitstring(io_lib:format("~p", [R]))).

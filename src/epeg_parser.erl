@@ -11,7 +11,7 @@
 % #Herarchical syntax
 % Grammar <- Spacing Definition+ EndOfFile
 % Definition <- Identifier LEFTARROW Expression Transformer?
-% Transformer <- '`' (!'`' Char)* '`' Spacing
+% Transformer <- '\`' (!'\`' Char)* '\`' Spacing
 % Expression <- Sequence (SLASH Sequence)*
 % Sequence <- Prefix+
 % Prefix <- (AND / NOT)? Suffix
@@ -28,9 +28,7 @@
 % / ["] (!["] Char)* ["] Spacing
 % Class <- '[' (!']' Range)* ']' Spacing
 % Range <- Char '-' Char / Char
-% Char <- '\\' [nrt'"\[\]\\] # support unicode
-% / '\\' [0-2][0-7][0-7]
-% / '\\' [0-7][0-7]?
+% Char <- '\\' [nrt'\`"\[\]\\] # support unicode
 % / !'\\' .
 % LEFTARROW <- '<-' Spacing
 % SLASH <- '/' Spacing
@@ -244,10 +242,10 @@ matched_Char(L) ->
 
 matched_Range(L) ->
 	case L of
-	[F, "-", T] ->
+	[{char, [F]}, "-", {char, [T]}] ->
 		[{charr, F, T}];
-	O->
-		O
+	[{char, [O]}]->
+		[{char, O}]
 	end.
 
 matched_Class(L) ->
@@ -257,13 +255,13 @@ matched_Class(L) ->
 	S = lists:droplast(X),
 	RangeStrList = lists:filtermap(fun(E) ->
 		case E of
-		{charr, {char, [F]}, {char, [T]}} ->
-			{true, {charr, {char, [F]}, {char, [T]}}};
+		{charr, F, T} ->
+			{true, {charr, F, T}};
 		_ -> false
 		end end, S),
 	CharList = lists:filtermap(fun(E) ->
 		case E of
-		{char, [C]} ->
+		{char, C} ->
 			{true, [C]};
 		_ -> false
 		end end, S),
@@ -284,7 +282,7 @@ matched_Class(L) ->
 	[Head| Tail] = RangeStrList ++ CharStr,
 	if
 	length(Tail) >= 1 ->
-		[{alt, [Head | Tail]}];
+		[{class, [Head | Tail]}];
 	true ->
 		[Head]
 	end.
@@ -302,44 +300,32 @@ matched_Literal(L) ->
 matched_Identifier(L)->
 	spacing = lists:last(L),
 	Id = lists:append(lists:droplast(L)),
-	[{identifier, Id}].
-
-matched_PrimaryClass(L) ->
-	case L of
-	{charr, {char, [F]}, {char, [T]}} ->
-		gen_charrange(F, T);
-	{charc, CList} ->
-		gen_charclass(CList)
-	end.
+	[{identifier, "'"++Id++"'"}].
 
 matched_Primary(L) ->
 	G = case L of
 	[{identifier, Id}] ->
-		gen_identifier(Id);
+		{symbol, Id};
 	[open, {expression, E}, close] ->
 		E;
 	[{literal, S}] ->
-		gen_literal(S);
-	[{charr, {char, [F]}, {char, [T]}}] ->
-		gen_charrange(F, T);
-	[{charc, CList}] ->
-		gen_charclass(CList);
-	[{alt, R}] ->
-		PC = lists:map(fun matched_PrimaryClass/1, R),
-		gen_alt(PC);
+		{string, S};
+	[{class, R}] ->
+		{alt, R};
 	[dot] ->
-		gen_anychar()
+		{anychar};
+	[O] -> O
 	end,
 	[{primary, G}].
 
 matched_Suffix(L) ->
 	G = case L of
 	[{primary, P}, question]->
-		lists:concat(["epeg_combinator:c_option(", P, ")"]);
+		{option, P};
 	[{primary, P}, star]->
-		lists:concat(["epeg_combinator:c_rep(", P, ")"]);
+		{rep, P};
 	[{primary, P}, plus]->
-		lists:concat(["epeg_combinator:c_more(", P, ")"]);
+		{more, P};
 	[{primary, P}]->
 		P
 	end,
@@ -348,9 +334,9 @@ matched_Suffix(L) ->
 matched_Prefix(L) ->
 	G = case L of
 	['and', {suffix, P}]->
-		lists:concat(["epeg_combinator:c_pred_and(", P, ")"]);
+		{p_and, P};
 	['not', {suffix, P}]->
-		lists:concat(["epeg_combinator:c_pred_not(", P, ")"]);
+		{p_not, P};
 	[{suffix, P}] ->
 		P
 	end,
@@ -362,9 +348,9 @@ matched_Sequence(L) ->
 		H;
 	[{prefix, H} | T] ->
 		A = lists:foldl(fun({prefix, E}, Acc)->
-			Acc ++ ", " ++ E
-		end, H, T),
-		lists:concat(["epeg_combinator:c_seq([", A, "])"])
+			Acc ++ [E]
+		end, [H], T),
+		{seq, A}
 	end,
 	[{sequence, G}].
 
@@ -376,12 +362,12 @@ matched_Expression(L) ->
 		A = lists:foldl(fun(E, Acc)->
 			case E of
 			slash ->
-				Acc ++ ", ";
+				Acc;
 			{sequence, SE} ->
-				Acc ++ SE
+				Acc ++ [SE]
 			end
-		end, H, T),
-		lists:concat(["epeg_combinator:c_alt([", A, "])"])
+		end, [H], T),
+		{alt, A}
 	end,
 	[{expression, G}].
 
@@ -397,42 +383,13 @@ matched_Transformer(L) ->
 
 matched_Definition(L) ->
 	case L of
-	[{identifier, Id}, larrow, {expression, E}, {transformer, T}]->
-		[{definition, lists:concat([
-			"epeg_combinator:c_symbol_put(\"", Id, "\", ",
-			"epeg_combinator:c_tr(", E, ", ", T, "))."])}];
-	[{identifier, Id}, larrow, {expression, E}]->
-		[{definition, lists:concat([
-			"epeg_combinator:c_symbol_put(\"", Id, "\", ",
-			E, ")."])}]
+	[{identifier, Id}, larrow, {expression, E}, {transformer, T}] ->
+		[{definition, Id, E, T}];
+	[{identifier, Id}, larrow, {expression, E}] ->
+		[{definition, Id, E}]
 	end.
 
 matched_Grammar(L) ->
 	eof = lists:last(L),
 	[spacing | Defs ] = lists:droplast(L),
-	[{definition, H} | T] = Defs,
-	lists:foldl(fun ({definition, E}, Acc) ->
-		Acc ++ "\n" ++ E
-		end, H, T).
-
-gen_identifier(Id) ->
-	lists:concat(["epeg_combinator:c_symbol_get(\"", Id, "\")"]).
-
-gen_literal(S) ->
-	lists:concat(["epeg_combinator:c_string(\"", S, "\")"]).
-
-gen_charrange(F, T) ->
-	lists:concat(["epeg_combinator:c_charrange(", F, ", ", T, ")"]).
-
-gen_charclass(CList) ->
-	lists:concat(["epeg_combinator:c_charclass(\"", CList, "\")"]).
-
-gen_alt(L) ->
-	[Head | Tail] = L,
-	S = lists:foldl(fun (E, Acc) ->
-		Acc ++ ", " ++ E
-		end, Head, Tail),
-	lists:concat(["epeg_combinator:c_alt([", S, "])"]).
-
-gen_anychar() ->
-	"epeg_combinator:c_anychar()".
+	[{grammar, Defs}].
