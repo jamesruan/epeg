@@ -20,29 +20,29 @@
 %	c_symbol_get/1
 	]).
 
--type parser_continuation() :: fun((parse_result(), parser_continuation()) -> parse_result()).
+-type parser_continuation() :: fun((parse_result()) -> parse_result()).
 -type cps_parser() :: fun((state(), any(), parser_continuation()) -> parse_result()).
 
 -spec cps_tr(state(), {cps_parser(), transformer()}, parser_continuation()) -> parse_result().
-cps_tr({I, _, Input}, {A, T}, K) when is_function(T) ->
-	A({I, [], Input}, fun(R) ->
+cps_tr({I, Input, _}, {A, T}, K) when is_function(T) ->
+	A({I, Input, []}, [], fun(R) ->
 		case R of
-		{ok, {Ia, Pa, Input}} ->
-			K({ok, {Ia, T(Pa), Input}});
+		{ok, {Ia, Input, Pa}} ->
+			K({ok, {Ia, Input, T(Pa)}});
 		_ ->
 			K(R)
 		end
 	end).
 
 -spec cps_empty(state(), any(), parser_continuation()) -> parse_result().
-cps_empty({I, _, Input}, _, K) when I > length(Input) ->
-	K({fail, eof, {I, [], Input}});
+cps_empty({I, Input, _}, _, K) when I > length(Input) ->
+	K({fail, eof, {I, Input, []}});
 cps_empty(S, _, K) ->
 	K({ok, S}).
 
 -spec cps_anychar(state(), any(), parser_continuation()) -> parse_result().
-cps_anychar({I, _, Input}, _, K) ->
-	cps_empty({I, [], Input}, [], fun(R) ->
+cps_anychar({I, Input, _}, _, K) ->
+	cps_empty({I, Input, []}, [], fun(R) ->
 		case R of
 		{ok, _} ->
 			K({ok, {I+1, [[lists:nth(I, Input)]], Input}});
@@ -52,15 +52,15 @@ cps_anychar({I, _, Input}, _, K) ->
 	end).
 
 -spec cps_char(state(), char(), parser_continuation()) -> parse_result().
-cps_char({I, _, Input}, C, K) ->
-	cps_empty({I, [], Input}, [], fun(R) ->
+cps_char({I, Input, _}, C, K) ->
+	cps_empty({I, Input, []}, [], fun(R) ->
 		case R of
 		{ok, _} ->
 			PR = case lists:nth(I, Input) of
 			C ->
-				{ok, {I+1, [[C]], Input}};
+				{ok, {I+1, Input, [[C]]}};
 			_ ->
-				{fail, {mismatch, char, [C]}, {I, [], Input}}
+				{fail, {mismatch, char, [C]}, {I, Input, []}}
 			end,
 			K(PR);
 		_ ->
@@ -69,16 +69,16 @@ cps_char({I, _, Input}, C, K) ->
 	end).
 
 -spec cps_charrange(state(), {char(), char()}, parser_continuation()) -> parse_result().
-cps_charrange({I, _, Input}, {F, T}, K) when F < T->
-	cps_empty({I, [], Input}, [], fun(R) ->
+cps_charrange({I, Input, _}, {F, T}, K) when F < T->
+	cps_empty({I, Input, []}, [], fun(R) ->
 		case R of
 		{ok, _} ->
 			C = lists:nth(I, Input),
 			PR = if
 			C >= F , C =< T ->
-				{ok, {I+1, [[C]], Input}};
+				{ok, {I+1, Input, [[C]]}};
 			true ->
-				{fail, {mismatch, charrange, [F], [T]}, {I, [], Input}}
+				{fail, {mismatch, charrange, [F], [T]}, {I, Input, []}}
 			end,
 			K(PR);
 		_ ->
@@ -87,16 +87,16 @@ cps_charrange({I, _, Input}, {F, T}, K) when F < T->
 	end).
 
 -spec cps_charclass(state(), string(), parser_continuation()) -> parse_result().
-cps_charclass({I, _, Input}, L, K) ->
-	cps_empty({I, [], Input}, [], fun(R) ->
+cps_charclass({I, Input, _}, L, K) ->
+	cps_empty({I, Input, []}, [], fun(R) ->
 		case R of
 		{ok, _} ->
 			C = lists:nth(I, Input),
 			PR = case lists:member(C, L) of
 			true ->
-				{ok, {I+1, [[C]], Input}};
+				{ok, {I+1, Input, [[C]]}};
 			_ ->
-				{fail, {mismatch, charclass, L}, {I, [], Input}}
+				{fail, {mismatch, charclass, L}, {I, Input, []}}
 			end,
 			K(PR);
 		_ ->
@@ -105,15 +105,15 @@ cps_charclass({I, _, Input}, L, K) ->
 	end).
 
 -spec cps_string(state(), string(), parser_continuation()) -> parse_result().
-cps_string({I, _, Input}, S, K) ->
-	cps_empty({I, [], Input}, [], fun(R) ->
+cps_string({I, Input, _}, S, K) ->
+	cps_empty({I, Input, []}, [], fun(R) ->
 		case R of
 		{ok, _} ->
 			case lists:sublist(Input, I, length(S)) of
 			S ->
-				K({ok, {I+length(S), [S], Input}});
+				K({ok, {I+length(S), Input, [S]}});
 			_ ->
-				K({fail, {mismatch, string, S}, {I, [], Input}})
+				K({fail, {mismatch, string, S}, {I, Input, []}})
 			end;
 		_ ->
 			K(R)
