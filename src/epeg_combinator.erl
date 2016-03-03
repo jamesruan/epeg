@@ -21,166 +21,152 @@
 	c_symbol_get/1
 	]).
 
-
--spec c_tr(parser(), transformer()) -> parser().
 c_tr(A, T) when is_function(T) ->
 	fun (S) ->
 		case A(S) of
-		{ok, {I, P, Input}} ->
-			{ok, {I, T(P), Input}};
+		{ok, {I, Input, P}} ->
+			{ok, {I, Input, T(P)}};
 		Otherwise ->
 			Otherwise
 		end
 	end.
 
--spec c_empty() -> parser().
 c_empty() ->
-	fun ({I, _P, Input}) ->
-		{ok, {I, [], Input}}
+	fun ({I, Input, _}) ->
+		{ok, {I, Input, []}}
 	end.
 
--spec c_anychar() -> parser().
 c_anychar() ->
-	fun ({I, _, Input}) ->
+	fun ({I, Input, _}) ->
 		case I > length(Input) of
 		true ->
-			{fail, eof, {I, [], Input}};
+			{fail, eof, {I, Input, []}};
 		_ ->
-			{ok, {I+1, [[lists:nth(I, Input)]], Input}}
+			{ok, {I+1, Input, [[lists:nth(I, Input)]]}}
 		end
 	end.
 
--spec c_char(char()) -> parser().
 c_char(C) ->
-	fun ({I, _, Input})->
+	fun ({I, Input, _})->
 		case I > length(Input) of
 		true ->
-			{fail, eof, {I, [], Input}};
+			{fail, eof, {I, Input, []}};
 		_ ->
 			case lists:nth(I, Input) of
 			C ->
-				{ok, {I+1, [[C]], Input}};
+				{ok, {I+1, Input, [[C]]}};
 			_ ->
-				{fail, {mismatch, char, [C]}, {I, [], Input}}
+				{fail, {mismatch, char, [C]}, {I, Input, []}}
 			end
 		end
 	end.
 
--spec c_charrange(char(), char()) -> parser().
 c_charrange(F, T) when F < T ->
-	fun ({I, _, Input})->
+	fun ({I, Input, _})->
 		case I > length(Input) of
 		true ->
-			{fail, eof, {I, [], Input}};
+			{fail, eof, {I, Input, []}};
 		_ ->
 			C = lists:nth(I, Input),
 			if
 			C >= F , C =< T ->
-				{ok, {I+1, [[C]], Input}};
+				{ok, {I+1, Input, [[C]]}};
 			true ->
-				{fail, {mismatch, charrange, [F], [T]}, {I, [], Input}}
+				{fail, {mismatch, charrange, [F], [T]}, {I, Input, []}}
 			end
 		end
 	end.
 
--spec c_charclass(string()) -> parser().
 c_charclass(L) ->
-	fun ({I, _, Input})->
+	fun ({I, Input, _})->
 		case I > length(Input) of
 		true ->
-			{fail, eof, {I, [], Input}};
+			{fail, eof, {I, Input, []}};
 		_ ->
 			C = lists:nth(I, Input),
 			case lists:member(C, L) of
 			true ->
-				{ok, {I+1, [[C]], Input}};
+				{ok, {I+1, Input, [[C]]}};
 			_ ->
-				{fail, {mismatch, charclass, L}, {I, [], Input}}
+				{fail, {mismatch, charclass, L}, {I, Input, []}}
 			end
 		end
 	end.
 
--spec c_string(string()) -> parser().
 c_string(S) ->
-	fun ({I, _, Input}) ->
+	fun ({I, Input, _}) ->
 		case lists:sublist(Input, I, length(S)) of
 		S ->
-			{ok, {I+length(S), [S], Input}};
+			{ok, {I+length(S), Input, [S]}};
 		_ ->
-			{fail, {mismatch, string, S}, {I, [], Input}}
+			{fail, {mismatch, string, S}, {I, Input, []}}
 		end
 	end.
 
 
--spec c_then(parser(), parser()) -> parser().
 %([A], [B]) -> [A, B]
 c_then(A, B) ->
-	fun ({I, _, Input}) ->
-		case A({I, [], Input}) of
-		{ok, {Ia, Pa, _}} ->
-			case B({Ia, Pa, Input}) of
-			{ok, {Ib, Pb, _}} ->
-				{ok, {Ib, Pa ++ Pb, Input}};
+	fun ({I, Input, _}) ->
+		case A({I, Input, []}) of
+		{ok, {Ia, _, Pa}} ->
+			case B({Ia, Input, Pa}) of
+			{ok, {Ib, _, Pb}} ->
+				{ok, {Ib, Input, Pa ++ Pb}};
 			{fail, Reason, _} ->
-				{fail, Reason, {I, [], Input}}
+				{fail, Reason, {I, Input, []}}
 			end;
 		{fail, Reason, _} ->
-			{fail, Reason, {I, [], Input}}
+			{fail, Reason, {I, Input, []}}
 		end
 	end.
 
--spec c_seq([parser()]) -> parser().
 %([A, B, ...]) -> [A, B, ...]
 c_seq([H|[A|[]]]) -> c_then(H, A);
 c_seq([H|[A|T]]) -> lists:foldl(fun (E, Acc) ->
 	c_then(Acc, E) end
 	, c_then(H, A), T).
 
--spec c_pred_not(parser()) -> parser().
 % !
 c_pred_not(A) ->
-	fun ({I, _, Input}) ->
-		case A({I, [], Input}) of
+	fun ({I, Input, _}) ->
+		case A({I, Input, []}) of
 		{ok, _State} ->
-			{fail, {mismatch, '!'}, {I, [], Input}};
+			{fail, {mismatch, '!'}, {I, Input, []}};
 		{fail, _R, _S} ->
-			{ok, {I, [], Input}}
+			{ok, {I, Input, []}}
 		end
 	end.
 
 
--spec c_pred_and(parser()) -> parser().
 % &
 c_pred_and(A) ->
-	fun ({I, _, Input}) ->
-		case A({I, [], Input}) of
+	fun ({I, Input, _}) ->
+		case A({I, Input, []}) of
 		{ok, _State} ->
-			{ok, {I, [], Input}};
+			{ok, {I, Input, []}};
 		{fail, _R, _S} ->
-			{fail, {mismatch, '&'}, {I, [], Input}}
+			{fail, {mismatch, '&'}, {I, Input, []}}
 		end
 	end.
 
 
--spec c_orelse(parser(), parser()) -> parser().
 % |
 %([A], [B]) -> [A or B]
 c_orelse(A, B) ->
-	fun ({I, _, Input}) ->
-		case A({I, [], Input}) of
-		{ok, {Ia, Pa, _}} ->
-			{ok, {Ia, Pa, Input}};
+	fun ({I, Input, _}) ->
+		case A({I, Input, []}) of
+		{ok, {Ia, _, Pa}} ->
+			{ok, {Ia, Input, Pa}};
 		{fail, _R, _S} ->
-			case B({I, [], Input}) of
-			{ok, {Ib, Pb, _}} ->
-				{ok, {Ib, Pb, Input}};
+			case B({I, Input, []}) of
+			{ok, {Ib, _, Pb}} ->
+				{ok, {Ib, Input, Pb}};
 			{fail, R, _S} ->
-				{fail, R, {I, [], Input}}
+				{fail, R, {I, Input, []}}
 			end
 		end
 	end.
 
--spec c_alt([parser()]) -> parser().
 %([A, B, ...]) -> [A or B or ...]
 c_alt([H|[A|[]]]) -> c_orelse(H, A);
 c_alt([H|[A|T]]) ->
@@ -189,40 +175,36 @@ c_alt([H|[A|T]]) ->
 	c_orelse(H, A), T).
 
 
--spec c_rep(parser()) -> parser().
 %([A]) -> [A1, A2, ...]
 % *
 c_rep(A) ->
-	fun R({I, _, Input}) ->
-		case A({I, [], Input}) of
-		{ok, {Io, Po, _}} ->
-			{ok, {In, Pn, _}} = R({Io, [], Input}),
-			{ok, {In, Po ++ Pn, Input}};
+	fun R({I, Input, _}) ->
+		case A({I, Input, []}) of
+		{ok, {Io, _, Po}} ->
+			{ok, {In, _, Pn}} = R({Io, Input, []}),
+			{ok, {In, Input, Po ++ Pn}};
 		{fail, _, _} ->
-			{ok, {I, [], Input}}
+			{ok, {I, Input, []}}
 		end
 	end.
 
--spec c_more(parser()) -> parser().
 %([A]) -> [A, A1, ...]
 % +
 c_more(A) -> c_then(A, c_rep(A)).
 
--spec c_option(parser()) -> parser().
 % ?
 c_option(A) -> c_orelse(A, c_empty()).
 
 -ifdef(TRACE).
--spec c_symbol_put(atom(), parser()) -> parser().
 c_symbol_put(S, F) ->
 	case get(S) of
 	F -> F;
 	_ ->
-		R=fun({I, _, Input}) ->
+		R=fun({I, Input, _}) ->
 			?LOG(I), ?LOG(S),
-			V =  F({I, [], Input}),
+			V =  F({I, Input, []}),
 			case V of
-			{ok, {_, M, _}} ->
+			{ok, {_, _, M}} ->
 				?LOG({ok, S, M});
 			_ ->
 				pass
@@ -232,7 +214,6 @@ c_symbol_put(S, F) ->
 		R
 	end.
 -else.
--spec c_symbol_put(atom(), parser()) -> parser().
 c_symbol_put(S, F) ->
 	case get(S) of
 	F -> F;
@@ -242,5 +223,4 @@ c_symbol_put(S, F) ->
 	end.
 -endif.
 
--spec c_symbol_get(atom()) -> parser().
 c_symbol_get(S) -> get(S).

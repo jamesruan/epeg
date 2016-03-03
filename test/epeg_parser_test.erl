@@ -3,8 +3,8 @@
 -include("epeg.hrl").
 -include("epeg_parser.hrl").
 
--define(P(S), {1, "", S}).
--define(M(S), {ok, {_, S, _}}).
+-define(P(S), {1, S, ""}).
+-define(M(S), {ok, {_, _, S}}).
 
 -define(S(F), {timeout, 10, {??F, F}}).
 setup() ->
@@ -207,5 +207,5 @@ test_Grammar() ->
 test_bootstrap() ->
 	{ok, B} = file:read_file("../priv/grammar.epeg"),
 	F = ?SYM('_Grammar'),
-	{ok, {_, R, _}} = F(?P(binary:bin_to_list(B))),
+	{ok, {_, _, R}} = F(?P(binary:bin_to_list(B))),
 	ok = file:write_file("../priv/test.ast", erlang:list_to_bitstring(io_lib:format("~p", [R]))).

@@ -15,12 +15,12 @@
 -type index() :: pos_integer().
 -type parsed() :: any().
 -type input() :: string().
--type parse_result() :: parse_ok() | parse_fail().
--type parse_ok() :: { ok, state()}.
--type parse_fail() :: { fail, fail_reason(), state()}.
--type state() :: {index(), [parsed()], input()}.
--type parser() :: fun((state(), transformer()) -> parse_result()).
--type transformer() :: fun(([parsed()]) -> [string()]).
--type combinator() :: fun((any()|none())-> parser()).
+-type state() :: {index(),  input(), [parsed()]}.
+-type transformer() :: fun(([parsed()]) -> [parsed()]).
+-type parse_ok() :: {ok, state()}.
+-type parse_fail() :: {fail, fail_reason(), state()}.
 -type fail_reason() :: mismatch | eof.
+-type parse_result() :: parse_ok() | parse_fail().
+-type parser() :: fun((state(), transformer()) -> parse_result()).
+-type combinator() :: fun((any()|none())-> parser()).
 -endif.
