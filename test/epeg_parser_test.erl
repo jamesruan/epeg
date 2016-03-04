@@ -2,48 +2,50 @@
 -include_lib("eunit/include/eunit.hrl").
 -include("epeg.hrl").
 -include("epeg_parser.hrl").
+-define(SYM(S), epeg_parser:grammar(S)).
 
--define(P(S), {1, S, ""}).
+-define(P(S), {1, S, ""}, [], fun epeg_cps:return/1).
 -define(M(S), {ok, {_, _, S}}).
 
 -define(S(F), {timeout, 10, {??F, F}}).
 setup() ->
-	erase(),
-	epeg_parser:formal_grammar().
+%	erase(),
+%	epeg_parser:formal_grammar().
+	pass.
 
 
 symbol_test_() ->
 	setup(),
 	[
-	?S(fun test_EOF/0),
-	?S(fun test_EOL/0),
-	?S(fun test_Space/0),
-	?S(fun test_Comment/0),
-	?S(fun test_Spacing/0),
-	?S(fun test_DOT/0),
-	?S(fun test_CLOSE/0),
-	?S(fun test_OPEN/0),
-	?S(fun test_PLUS/0),
-	?S(fun test_STAR/0),
-	?S(fun test_QUESTION/0),
-	?S(fun test_NOT/0),
-	?S(fun test_AND/0),
-	?S(fun test_SLASH/0),
-	?S(fun test_LARROW/0),
-	?S(fun test_Char/0),
-	?S(fun test_Range/0),
-	?S(fun test_Class/0),
-	?S(fun test_Literal/0),
-	?S(fun test_Identifier/0),
-	?S(fun test_Primary/0),
-	?S(fun test_Suffix/0),
-	?S(fun test_Prefix/0),
-	?S(fun test_Sequence/0),
-	?S(fun test_Expression/0),
-	?S(fun test_Transformer/0),
-	?S(fun test_Definition/0),
-	?S(fun test_Grammar/0),
-	?S(fun test_bootstrap/0)
+	 ?S(fun test_EOF/0)
+	,?S(fun test_EOL/0)
+	,?S(fun test_Space/0)
+	,?S(fun test_Comment/0)
+	,?S(fun test_Spacing/0)
+	,?S(fun test_DOT/0)
+	,?S(fun test_CLOSE/0)
+	,?S(fun test_OPEN/0)
+	,?S(fun test_PLUS/0)
+	,?S(fun test_STAR/0)
+	,?S(fun test_QUESTION/0)
+	,?S(fun test_NOT/0)
+	,?S(fun test_AND/0)
+	,?S(fun test_SLASH/0)
+	,?S(fun test_LARROW/0)
+	,?S(fun test_Char/0)
+	,?S(fun test_Range/0)
+	,?S(fun test_Class/0)
+	,?S(fun test_Literal/0)
+	,?S(fun test_Identifier/0)
+	,?S(fun test_Primary/0)
+	,?S(fun test_Suffix/0)
+	,?S(fun test_Prefix/0)
+	,?S(fun test_Sequence/0)
+	,?S(fun test_Expression/0)
+	,?S(fun test_Transformer/0)
+	,?S(fun test_Definition/0)
+	,?S(fun test_Grammar/0)
+	,?S(fun test_bootstrap/0)
 	].
 
 test_EOF() ->

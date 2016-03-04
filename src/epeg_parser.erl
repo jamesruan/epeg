@@ -1,11 +1,15 @@
 -module(epeg_parser).
+-compile(nowarn_shadow_vars).
 -include_lib("eunit/include/eunit.hrl").
 
 
 -include("epeg.hrl").
 -include("epeg_parser.hrl").
 
--export([formal_grammar/0]).
+-define(SYM(S), grammar(S)).
+-define(SET(S, P), grammar(S)->P).
+
+-export([grammar/1]).
 
 
 % #Herarchical syntax
@@ -46,131 +50,126 @@
 % EndOfLine <- '\r\n' / '\n' / '\r'
 % EndOfFile <- !.
 
-formal_grammar() ->
-% formal_grammar() matches PEG with combinators and generates a PEG parser.
-% double loading to solve mutual dependency problem.
-	grammar(), grammar().
-
-grammar() ->
-	?SET('_EOF',
-		?T(?PNOT(?ANYCHAR()),
-		fun matched_EOF/1)),
-	?SET('_EOL',
-		?T(?ALT([?STRING("\r\n"), ?CHAR($\n), ?CHAR($\r)]),
-		fun matched_EOL/1)),
-	?SET('_Space',
-		?T(?ALT([?CHAR($\ ), ?CHAR($\t), ?SYM('_EOL')]),
-		fun matched_Space/1)),
-	?SET('_Comment',
-		?T(?SEQ([?CHAR($%), ?REP(?SEQ([?PNOT(?SYM('_EOL')), ?ANYCHAR()])), ?SYM('_EOL')]),
-		fun matched_Comment/1)),
-	?SET('_Spacing',
-		?T(?REP(?ALT([?SYM('_Space'), ?SYM('_Comment')])),
-		fun matched_Spacing/1)),
-	?SET('_DOT',
-		?T(?SEQ([?CHAR($.), ?SYM('_Spacing')]),
-		fun matched_DOT/1)),
-	?SET('_CLOSE',
-		?T(?SEQ([?CHAR($)), ?SYM('_Spacing')]),
-		fun matched_CLOSE/1)),
-	?SET('_OPEN',
-		?T(?SEQ([?CHAR($(), ?SYM('_Spacing')]),
-		fun matched_OPEN/1)),
-	?SET('_PLUS',
-		?T(?SEQ([?CHAR($+), ?SYM('_Spacing')]),
-		fun matched_PLUS/1)),
-	?SET('_STAR',
-		?T(?SEQ([?CHAR($*), ?SYM('_Spacing')]),
-		fun matched_STAR/1)),
-	?SET('_QUESTION',
-		?T(?SEQ([?CHAR($?), ?SYM('_Spacing')]),
-		fun matched_QUESTION/1)),
-	?SET('_NOT',
-		?T(?SEQ([?CHAR($!), ?SYM('_Spacing')]),
-		fun matched_NOT/1)),
-	?SET('_AND',
-		?T(?SEQ([?CHAR($&), ?SYM('_Spacing')]),
-		fun matched_AND/1)),
-	?SET('_SLASH',
-		?T(?SEQ([?CHAR($/), ?SYM('_Spacing')]),
-		fun matched_SLASH/1)),
-	?SET('_LARROW',
-		?T(?SEQ([?STRING("<-"), ?SYM('_Spacing')]),
-		fun matched_LARROW/1)),
-	?SET('_Char',
-		?T(?ALT([
-			?SEQ([?CHAR($\\), ?CHARC("rnt[`]\\\"\'")]),
-			?SEQ([?PNOT(?CHAR($\\)), ?CHARR(0, 16#10ffff)])]),
-		fun matched_Char/1)),
-	?SET('_Range',
-		?T(?ALT([
-			?SEQ([?SYM('_Char'), ?CHAR($-), ?SYM('_Char')]),
-			?SYM('_Char')]),
-		fun matched_Range/1)),
-	?SET('_Class',
-		?T(?SEQ([?CHAR($[),
-			?REP(?SEQ([?PNOT(?CHAR($])), ?SYM('_Range')])),
-			?CHAR($]), ?SYM('_Spacing')]),
-		fun matched_Class/1)),
-	?SET('_Literal',
-		?T(?ALT([
-			?SEQ([?CHAR($'),
-			?REP(?SEQ([?PNOT(?CHAR($')), ?SYM('_Char')])),
-			?CHAR($'), ?SYM('_Spacing')]),
-			?SEQ([?CHAR($"),
-			?REP(?SEQ([?PNOT(?CHAR($")), ?SYM('_Char')])),
-			?CHAR($"), ?SYM('_Spacing')])]),
-		fun matched_Literal/1)),
-	?SET('_IdentStart',
-		?ALT([?CHAR($_), ?CHARR($a, $z), ?CHARR($A, $Z)])),
-	?SET('_IdentCont',
-		?ALT([?SYM('_IdentStart'), ?CHARR($0, $9)])),
-	?SET('_Identifier',
-		?T(?SEQ([
-			?SYM('_IdentStart'),
-			?REP(?SYM('_IdentCont')),
-			?SYM('_Spacing')]),
-		fun matched_Identifier/1)),
-	?SET('_Primary',
-		?T(?ALT([
-			?SEQ([?SYM('_Identifier'), ?PNOT(?SYM('_LARROW'))]),
-			?SEQ([?SYM('_OPEN'), ?SYM('_Expression'),  ?SYM('_CLOSE')]),
-			?SYM('_Literal'),
-			?SYM('_Class'),
-			?SYM('_DOT')]),
-		fun matched_Primary/1)),
-	?SET('_Suffix',
-		?T(?SEQ([?SYM('_Primary'),
-		?OPT(?ALT([?SYM('_QUESTION'), ?SYM('_STAR'), ?SYM('_PLUS')]))]),
-		fun matched_Suffix/1)),
-	?SET('_Prefix',
-		?T(?SEQ([?OPT(?ALT([?SYM('_AND'), ?SYM('_NOT')])), ?SYM('_Suffix')]),
-		fun matched_Prefix/1)),
-	?SET('_Sequence',
-		?T(?MORE(?SYM('_Prefix')),
-		fun matched_Sequence/1)),
-	?SET('_Expression',
-		?T(?SEQ([?SYM('_Sequence'),
-		?REP(?SEQ([?SYM('_SLASH'), ?SYM('_Sequence')]))]),
-		fun matched_Expression/1)),
-	?SET('_Transformer',
-		?T(?SEQ([?CHAR($`),
-			?REP(?SEQ([?PNOT(?CHAR($`)), ?SYM('_Char')])),
-			?CHAR($`), ?SYM('_Spacing')]),
-		fun matched_Transformer/1)),
-	?SET('_Definition', 
-		?T(?SEQ([
-			?SYM('_Identifier'),
-			?SYM('_LARROW'),
-			?SYM('_Expression'),
-			?OPT(?SYM('_Transformer'))]),
-		fun matched_Definition/1)),
-	?SET('_Grammar',
-		?T(?SEQ([
-			?SYM('_Spacing'),
-			?MORE(?SYM('_Definition')),
-			?SYM('_EOF')]),
-		fun matched_Grammar/1)).
+ ?SET('_EOF',
+	?TR({?PNOT(?ANYCHAR()),
+	fun matched_EOF/1}))
+;?SET('_EOL',
+	?TR({?ALT([?STRING("\r\n"), ?CHAR($\n), ?CHAR($\r)]),
+	fun matched_EOL/1}))
+;?SET('_Space',
+	?TR({?ALT([?CHAR($\ ), ?CHAR($\t), ?SYM('_EOL')]),
+	fun matched_Space/1}))
+;?SET('_Comment',
+	?TR({?SEQ([?CHAR($%), ?REP(?SEQ([?PNOT(?SYM('_EOL')), ?ANYCHAR()])), ?SYM('_EOL')]),
+	fun matched_Comment/1}))
+;?SET('_Spacing',
+	?TR({?REP(?ALT([?SYM('_Space'), ?SYM('_Comment')])),
+	fun matched_Spacing/1}))
+;?SET('_DOT',
+	?TR({?SEQ([?CHAR($.), ?SYM('_Spacing')]),
+	fun matched_DOT/1}))
+;?SET('_CLOSE',
+	?TR({?SEQ([?CHAR($)), ?SYM('_Spacing')]),
+	fun matched_CLOSE/1}))
+;?SET('_OPEN',
+	?TR({?SEQ([?CHAR($(), ?SYM('_Spacing')]),
+	fun matched_OPEN/1}))
+;?SET('_PLUS',
+	?TR({?SEQ([?CHAR($+), ?SYM('_Spacing')]),
+	fun matched_PLUS/1}))
+;?SET('_STAR',
+	?TR({?SEQ([?CHAR($*), ?SYM('_Spacing')]),
+	fun matched_STAR/1}))
+;?SET('_QUESTION',
+	?TR({?SEQ([?CHAR($?), ?SYM('_Spacing')]),
+	fun matched_QUESTION/1}))
+;?SET('_NOT',
+	?TR({?SEQ([?CHAR($!), ?SYM('_Spacing')]),
+	fun matched_NOT/1}))
+;?SET('_AND',
+	?TR({?SEQ([?CHAR($&), ?SYM('_Spacing')]),
+	fun matched_AND/1}))
+;?SET('_SLASH',
+	?TR({?SEQ([?CHAR($/), ?SYM('_Spacing')]),
+	fun matched_SLASH/1}))
+;?SET('_LARROW',
+	?TR({?SEQ([?STRING("<-"), ?SYM('_Spacing')]),
+	fun matched_LARROW/1}))
+;?SET('_Char',
+	?TR({?ALT([
+		?SEQ([?CHAR($\\), ?CHARC("rnt[`]\\\"\'")]),
+		?SEQ([?PNOT(?CHAR($\\)), ?CHARR({0, 16#10ffff})])]),
+	fun matched_Char/1}))
+;?SET('_Range',
+	?TR({?ALT([
+		?SEQ([?SYM('_Char'), ?CHAR($-), ?SYM('_Char')]),
+		?SYM('_Char')]),
+	fun matched_Range/1}))
+;?SET('_Class',
+	?TR({?SEQ([?CHAR($[),
+		?REP(?SEQ([?PNOT(?CHAR($])), ?SYM('_Range')])),
+		?CHAR($]), ?SYM('_Spacing')]),
+	fun matched_Class/1}))
+;?SET('_Literal',
+	?TR({?ALT([
+		?SEQ([?CHAR($'),
+		?REP(?SEQ([?PNOT(?CHAR($')), ?SYM('_Char')])),
+		?CHAR($'), ?SYM('_Spacing')]),
+		?SEQ([?CHAR($"),
+		?REP(?SEQ([?PNOT(?CHAR($")), ?SYM('_Char')])),
+		?CHAR($"), ?SYM('_Spacing')])]),
+	fun matched_Literal/1}))
+;?SET('_IdentStart',
+	?ALT([?CHAR($_), ?CHARR({$a, $z}), ?CHARR({$A, $Z})]))
+;?SET('_IdentCont',
+	?ALT([?SYM('_IdentStart'), ?CHARR({$0, $9})]))
+;?SET('_Identifier',
+	?TR({?SEQ([
+		?SYM('_IdentStart'),
+		?REP(?SYM('_IdentCont')),
+		?SYM('_Spacing')]),
+	fun matched_Identifier/1}))
+;?SET('_Primary',
+	?TR({?ALT([
+		?SEQ([?SYM('_Identifier'), ?PNOT(?SYM('_LARROW'))]),
+		?SEQ([?SYM('_OPEN'), ?SYM('_Expression'), ?SYM('_CLOSE')]),
+		?SYM('_Literal'),
+		?SYM('_Class'),
+		?SYM('_DOT')]),
+	fun matched_Primary/1}))
+;?SET('_Suffix',
+	?TR({?SEQ([?SYM('_Primary'),
+	?OPT(?ALT([?SYM('_QUESTION'), ?SYM('_STAR'), ?SYM('_PLUS')]))]),
+	fun matched_Suffix/1}))
+;?SET('_Prefix',
+	?TR({?SEQ([?OPT(?ALT([?SYM('_AND'), ?SYM('_NOT')])), ?SYM('_Suffix')]),
+	fun matched_Prefix/1}))
+;?SET('_Sequence',
+	?TR({?MORE(?SYM('_Prefix')),
+	fun matched_Sequence/1}))
+;?SET('_Expression',
+	?TR({?SEQ([?SYM('_Sequence'),
+	?REP(?SEQ([?SYM('_SLASH'), ?SYM('_Sequence')]))]),
+	fun matched_Expression/1}))
+;?SET('_Transformer',
+	?TR({?SEQ([?CHAR($`),
+		?REP(?SEQ([?PNOT(?CHAR($`)), ?SYM('_Char')])),
+		?CHAR($`), ?SYM('_Spacing')]),
+	fun matched_Transformer/1}))
+;?SET('_Definition', 
+	?TR({?SEQ([
+		?SYM('_Identifier'),
+		?SYM('_LARROW'),
+		?SYM('_Expression'),
+		?OPT(?SYM('_Transformer'))]),
+	fun matched_Definition/1}))
+;?SET('_Grammar',
+	?TR({?SEQ([
+		?SYM('_Spacing'),
+		?MORE(?SYM('_Definition')),
+		?SYM('_EOF')]),
+	fun matched_Grammar/1}))
+.
 
 matched_EOF(_L) ->
 	% !.
