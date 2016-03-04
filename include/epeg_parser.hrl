@@ -1,19 +1,16 @@
 -ifndef(epeg_parser_h).
 -define(epeg_parser_h, 1).
--define(T, epeg_combinator:c_tr).
--define(ANYCHAR, epeg_combinator:c_anychar).
--define(CHAR, epeg_combinator:c_char).
--define(CHARR, epeg_combinator:c_charrange).
--define(CHARC, epeg_combinator:c_charclass).
--define(STRING, epeg_combinator:c_string).
--define(SEQ, epeg_combinator:c_seq).
--define(PAND, epeg_combinator:c_pred_and).
--define(PNOT, epeg_combinator:c_pred_not).
--define(ALT, epeg_combinator:c_alt).
--define(REP, epeg_combinator:c_rep).
--define(MORE, epeg_combinator:c_more).
--define(OPT, epeg_combinator:c_option).
--define(SYM, epeg_combinator:c_symbol_get).
--define(SET(S, P), epeg_combinator:c_symbol_put(S, P)).
--define(STR(S), ??S).
+-define(TR(A), fun(S, _, K) -> epeg_cps:cps_tr(S, A, K) end).
+-define(ANYCHAR(), fun(S, _, K) -> epeg_cps:cps_anychar(S, [], K) end).
+-define(CHAR(C), fun(S, _, K) -> epeg_cps:cps_char(S, C, K) end).
+-define(CHARR(R), fun(S, _, K) -> epeg_cps:cps_charrange(S, R, K) end).
+-define(CHARC(L), fun(S, _, K) -> epeg_cps:cps_charclass(S, L, K) end).
+-define(STRING(L), fun(S, _, K) -> epeg_cps:cps_string(S, L, K) end).
+-define(SEQ(L), fun(S, _, K) -> epeg_cps:cps_seq(S, L, K) end).
+-define(PAND(P), fun(S, _, K) -> epeg_cps:cps_pred_and(S, P, K) end).
+-define(PNOT(P), fun(S, _, K) -> epeg_cps:cps_pred_not(S, P, K) end).
+-define(ALT(L), fun(S, _, K) -> epeg_cps:cps_alt(S, L, K) end).
+-define(REP(P), fun(S, _, K) -> epeg_cps:cps_rep(S, P, K) end).
+-define(MORE(P), fun(S, _, K) -> epeg_cps:cps_more(S, P, K) end).
+-define(OPT(P), fun(S, _, K) -> epeg_cps:cps_option(S, P, K) end).
 -endif.
