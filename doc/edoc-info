@@ -1,4 +1,0 @@
-%% encoding: UTF-8
-{application,epeg}.
-{modules,[epeg_app,epeg_combinator,epeg_cps,epeg_cps_parser,epeg_parse,
-          epeg_parser,epeg_sup]}.
