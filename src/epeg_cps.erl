@@ -17,8 +17,6 @@
 	,cps_rep/3
 	,cps_more/3
 	,cps_option/3
-%	,c_symbol_put/2
-%	,c_symbol_get/1
 	]).
 
 
@@ -139,7 +137,7 @@ cps_pred_and({I, Input, _}, A, K) ->
 			K({fail, {mismatch, '!'}, {I, Input, []}})
 		end
 	end).
-	
+
 -spec cps_alt(state(), [cps_parser()], parser_continuation()) -> parse_result().
 cps_alt(S, [H|[]], K) -> H(S, [], K);
 cps_alt(S, [H|T], K) ->

@@ -1,10 +1,9 @@
--module(epeg_parser).
+-module(epeg_cps_parser).
 -compile(nowarn_shadow_vars).
 -include_lib("eunit/include/eunit.hrl").
 
-
 -include("epeg.hrl").
--include("epeg_parser.hrl").
+-include("epeg_cps_parser.hrl").
 
 -define(SYM(S), grammar(S)).
 -define(SET(S, P), grammar(S)->P).
@@ -177,7 +176,7 @@ matched_EOF(_L) ->
 
 matched_EOL(_L) ->
 	[eol].
-	
+
 matched_Space(_L) ->
 	[space].
 

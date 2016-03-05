@@ -1,16 +1,14 @@
--module(epeg_parser_test).
+-module(epeg_cps_parser_test).
 -include_lib("eunit/include/eunit.hrl").
 -include("epeg.hrl").
--include("epeg_parser.hrl").
--define(SYM(S), epeg_parser:grammar(S)).
+-include("epeg_cps_parser.hrl").
+-define(SYM(S), epeg_cps_parser:grammar(S)).
 
 -define(P(S), {1, S, ""}, [], fun epeg_cps:return/1).
 -define(M(S), {ok, {_, _, S}}).
 
 -define(S(F), {timeout, 10, {??F, F}}).
 setup() ->
-%	erase(),
-%	epeg_parser:formal_grammar().
 	pass.
 
 
