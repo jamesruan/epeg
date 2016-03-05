@@ -1,0 +1,32 @@
+-ifndef(epeg_parser_h).
+-define(epeg_parser_h, 1).
+-include("epeg.hrl").
+-spec epeg_combinator:c_tr(state(), {parser(), transformer()}) -> result(state()).
+-spec epeg_combinator:c_empty(state(), any()) -> result(state()).
+-spec epeg_combinator:c_anychar(state(), any()) -> result(state()).
+-spec epeg_combinator:c_char(state(), char()) -> result(state()).
+-spec epeg_combinator:c_charrange(state(), {char(), char()}) -> result(state()).
+-spec epeg_combinator:c_charclass(state(), string()) -> result(state()).
+-spec epeg_combinator:c_string(state(), string()) -> result(state()).
+-spec epeg_combinator:c_seq(state(), [parser()]) -> result(state()).
+-spec epeg_combinator:c_pred_not(state(), parser()) -> result(state()).
+-spec epeg_combinator:c_pred_and(state(), parser()) -> result(state()).
+-spec epeg_combinator:c_alt(state(), [parser()]) -> result(state()).
+-spec epeg_combinator:c_rep(state(), parser()) -> result(state()).
+-spec epeg_combinator:c_more(state(), parser()) -> result(state()).
+-spec epeg_combinator:c_option(state(), parser()) -> result(state()).
+-define(TR(A),     fun(State) -> epeg_combinator:c_tr(State, A) end).
+-define(EMPTY(),   fun(State) -> epeg_combinator:c_empty(State, []) end).
+-define(ANYCHAR(), fun(State) -> epeg_combinator:c_anychar(State, []) end).
+-define(CHAR(A),   fun(State) -> epeg_combinator:c_char(State, A) end).
+-define(CHARR(A),  fun(State) -> epeg_combinator:c_charrange(State, A) end).
+-define(CHARC(A),  fun(State) -> epeg_combinator:c_charclass(State, A) end).
+-define(STRING(A), fun(State) -> epeg_combinator:c_string(State, A) end).
+-define(SEQ(A),    fun(State) -> epeg_combinator:c_seq(State, A) end).
+-define(PAND(A),   fun(State) -> epeg_combinator:c_pred_and(State, A) end).
+-define(PNOT(A),   fun(State) -> epeg_combinator:c_pred_not(State, A) end).
+-define(ALT(A),    fun(State) -> epeg_combinator:c_alt(State, A) end).
+-define(REP(A),    fun(State) -> epeg_combinator:c_rep(State, A) end).
+-define(MORE(A),   fun(State) -> epeg_combinator:c_more(State, A) end).
+-define(OPT(A),    fun(State) -> epeg_combinator:c_option(State, A) end).
+-endif.

@@ -1,16 +1,18 @@
--module(epeg_cps_parser_test).
+-module(epeg_parser_test).
 -include_lib("eunit/include/eunit.hrl").
 -include("epeg.hrl").
--include("epeg_cps_parser.hrl").
--define(SYM(S), epeg_cps_parser:grammar(S)).
+-include("epeg_parser.hrl").
 
--define(P(S), {1, S, ""}, [], fun epeg_cps:return/1).
+-define(P(S), {1, S, ""}).
 -define(M(S), {ok, {_, _, S}}).
 
 -define(S(F), {timeout, 10, {??F, F}}).
 
+-define(SYM(S), epeg_parser:grammar(S)).
+
 setup() ->
 	pass.
+
 
 symbol_test_() ->
 	setup(),
@@ -207,5 +209,5 @@ test_Grammar() ->
 test_bootstrap() ->
 	{ok, B} = file:read_file("../priv/grammar.epeg"),
 	F = ?SYM('_Grammar'),
-	{ok, {_, _, R}} = F(?P(binary:bin_to_list(B))),
+	?M(R) = F(?P(binary:bin_to_list(B))),
 	ok = file:write_file("../priv/test.ast", erlang:list_to_bitstring(io_lib:format("~p", [R]))).

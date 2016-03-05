@@ -1,8 +1,8 @@
--module(epeg_cps_parser).
+-module(epeg_parser).
 -compile(nowarn_shadow_vars).
 -include_lib("eunit/include/eunit.hrl").
 
--include("epeg_cps_parser.hrl").
+-include("epeg_parser.hrl").
 
 -export([grammar/1]).
 -define(SYM(S), grammar(S)).
@@ -46,8 +46,8 @@
 % EndOfFile <- !.
 
 % @doc Return parsers with symbol S.
-% @spec grammar(S :: atom()) -> cps_parser()
--spec grammar(S :: atom()) -> cps_parser().
+% @spec grammar(S :: atom()) -> parser()
+-spec grammar(S :: atom()) -> parser().
 grammar('_EOF') ->
 	?TR({?PNOT(?ANYCHAR()),
 	fun matched_EOF/1});
@@ -174,7 +174,7 @@ matched_EOF(_L) ->
 
 matched_EOL(_L) ->
 	[eol].
-
+	
 matched_Space(_L) ->
 	[space].
 

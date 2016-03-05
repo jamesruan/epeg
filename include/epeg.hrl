@@ -13,11 +13,13 @@
 -endif.
 
 -type index() :: pos_integer().
--type parsed() :: any().
 -type input() :: string().
--type state() :: {index(), input(), ([parsed()] | {index(), [parsed()]})}.
--type transformer() :: fun(([parsed()]) -> [parsed()]).
--type result(S) :: {ok, S} | {fail, fail_reason(), S}.
+-type state() :: {index(), input(), ([] | {index(), []})}.
+-type transformer() :: fun(([]) -> []).
 -type fail_reason() :: {mismatch, list()} | eof.
--type parser() :: fun((state()) -> result(state())).
+-type result(S) :: {ok, S} | {fail, fail_reason(), S}.
+-type parsed_result() :: result(state()).
+-type parser() :: fun((state()) -> parsed_result()).
+-type parser_continuation() :: fun((parsed_result()) -> parsed_result()).
+-type cps_parser() :: fun((state(), any(), parser_continuation()) -> parsed_result()).
 -endif.

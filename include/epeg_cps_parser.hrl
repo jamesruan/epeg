@@ -1,16 +1,33 @@
--ifndef(epeg_parser_h).
--define(epeg_parser_h, 1).
--define(TR(A), fun(S, _, K) -> epeg_cps:cps_tr(S, A, K) end).
+-ifndef(epeg_cps_parser_h).
+-define(epeg_cps_parser_h, 1).
+-include("epeg.hrl").
+-spec epeg_cps:return(parsed_result()) -> parsed_result().
+-spec epeg_cps:cps_tr(state(), {cps_parser(), transformer()}, parser_continuation()) -> parsed_result().
+-spec epeg_cps:cps_empty(state(), any(), parser_continuation()) -> parsed_result().
+-spec epeg_cps:cps_anychar(state(), any(), parser_continuation()) -> parsed_result().
+-spec epeg_cps:cps_char(state(), char(), parser_continuation()) -> parsed_result().
+-spec epeg_cps:cps_charrange(state(), {char(), char()}, parser_continuation()) -> parsed_result().
+-spec epeg_cps:cps_charclass(state(), L :: string(), parser_continuation()) -> parsed_result().
+-spec epeg_cps:cps_string(state(), string(), parser_continuation()) -> parsed_result().
+-spec epeg_cps:cps_seq(state(), [cps_parser()], parser_continuation()) -> parsed_result().
+-spec epeg_cps:cps_pred_not(state(), cps_parser(), parser_continuation()) -> parsed_result().
+-spec epeg_cps:cps_pred_and(state(), cps_parser(), parser_continuation()) -> parsed_result().
+-spec epeg_cps:cps_alt(state(), [cps_parser()], parser_continuation()) -> parsed_result().
+-spec epeg_cps:cps_rep(state(), cps_parser(), parser_continuation()) -> parsed_result().
+-spec epeg_cps:cps_more(state(), cps_parser(), parser_continuation()) -> parsed_result().
+-spec epeg_cps:cps_option(state(), cps_parser(), parser_continuation()) -> parsed_result().
+-define(TR(A),     fun(S, _, K) -> epeg_cps:cps_tr(S, A, K) end).
+-define(EMPTY(),   fun(S, _, K) -> epeg_cps:cps_anychar(S, [], K) end).
 -define(ANYCHAR(), fun(S, _, K) -> epeg_cps:cps_anychar(S, [], K) end).
--define(CHAR(C), fun(S, _, K) -> epeg_cps:cps_char(S, C, K) end).
--define(CHARR(R), fun(S, _, K) -> epeg_cps:cps_charrange(S, R, K) end).
--define(CHARC(L), fun(S, _, K) -> epeg_cps:cps_charclass(S, L, K) end).
--define(STRING(L), fun(S, _, K) -> epeg_cps:cps_string(S, L, K) end).
--define(SEQ(L), fun(S, _, K) -> epeg_cps:cps_seq(S, L, K) end).
--define(PAND(P), fun(S, _, K) -> epeg_cps:cps_pred_and(S, P, K) end).
--define(PNOT(P), fun(S, _, K) -> epeg_cps:cps_pred_not(S, P, K) end).
--define(ALT(L), fun(S, _, K) -> epeg_cps:cps_alt(S, L, K) end).
--define(REP(P), fun(S, _, K) -> epeg_cps:cps_rep(S, P, K) end).
--define(MORE(P), fun(S, _, K) -> epeg_cps:cps_more(S, P, K) end).
--define(OPT(P), fun(S, _, K) -> epeg_cps:cps_option(S, P, K) end).
+-define(CHAR(A),   fun(S, _, K) -> epeg_cps:cps_char(S, A, K) end).
+-define(CHARR(A),  fun(S, _, K) -> epeg_cps:cps_charrange(S, A, K) end).
+-define(CHARC(A),  fun(S, _, K) -> epeg_cps:cps_charclass(S, A, K) end).
+-define(STRING(A), fun(S, _, K) -> epeg_cps:cps_string(S, A, K) end).
+-define(SEQ(A),    fun(S, _, K) -> epeg_cps:cps_seq(S, A, K) end).
+-define(PAND(A),   fun(S, _, K) -> epeg_cps:cps_pred_and(S, A, K) end).
+-define(PNOT(A),   fun(S, _, K) -> epeg_cps:cps_pred_not(S, A, K) end).
+-define(ALT(A),    fun(S, _, K) -> epeg_cps:cps_alt(S, A, K) end).
+-define(REP(A),    fun(S, _, K) -> epeg_cps:cps_rep(S, A, K) end).
+-define(MORE(A),   fun(S, _, K) -> epeg_cps:cps_more(S, A, K) end).
+-define(OPT(A),    fun(S, _, K) -> epeg_cps:cps_option(S, A, K) end).
 -endif.
