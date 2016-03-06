@@ -12,14 +12,20 @@
 -define(LOG(X), true).
 -endif.
 
--type index() :: pos_integer().
--type input() :: string().
--type state() :: {index(), input(), ([] | {index(), []})}.
--type transformer() :: fun(([]) -> []).
--type fail_reason() :: {mismatch, list()} | eof.
+-type token() :: list().
+%% Token that returned when a symbol is parsed, must be a list
+-record(state,
+	{index :: pos_integer(),
+	 input = [] :: string(),
+	 parsed = [] :: token() | {pos_integer(), token()}}).
+%% The contains necessariy information for parsing state.
+-type transformer() :: fun((token()) -> token()).
+%% A function that changes the token from default.
 -type result(S) :: {ok, S} | {fail, fail_reason(), S}.
--type parsed_result() :: result(state()).
--type parser() :: fun((state()) -> parsed_result()).
--type parser_continuation() :: fun((parsed_result()) -> parsed_result()).
--type cps_parser() :: fun((state(), any(), parser_continuation()) -> parsed_result()).
+%% A mark for sucess or failure.
+-type parsed_result() :: result(#state{}).
+-type fail_reason() :: {mismatch, list()} | eof.
+%% Reason for parsing failure
+-type parser() :: fun((#state{}) -> parsed_result()).
+%% Monadic function that parses a token and return its parsed_result.
 -endif.

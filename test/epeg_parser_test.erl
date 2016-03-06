@@ -1,10 +1,9 @@
 -module(epeg_parser_test).
 -include_lib("eunit/include/eunit.hrl").
--include("epeg.hrl").
 -include("epeg_parser.hrl").
 
--define(P(S), {1, S, ""}).
--define(M(S), {ok, {_, _, S}}).
+-define(P(S), #state{index=1, input=S}).
+-define(M(S), {ok, #state{parsed=S}}).
 
 -define(S(F), {timeout, 10, {??F, F}}).
 
@@ -209,5 +208,6 @@ test_Grammar() ->
 test_bootstrap() ->
 	{ok, B} = file:read_file("../priv/grammar.epeg"),
 	F = ?SYM('_Grammar'),
+	?debugTime("Normal", F(?P(binary:bin_to_list(B)))),
 	?M(R) = F(?P(binary:bin_to_list(B))),
 	ok = file:write_file("../priv/test.ast", erlang:list_to_bitstring(io_lib:format("~p", [R]))).
